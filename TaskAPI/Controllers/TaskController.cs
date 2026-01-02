@@ -58,12 +58,12 @@ namespace TaskAPI.Controllers
 
 
         [HttpGet("count-by-type")]
-        public ActionResult<Dictionary<string, int>> GetTaskCountByType()
+        public async Task<ActionResult<Dictionary<string, int>>> GetTaskCountByType()
         {
-            var counts = _context.TaskTable
+            var counts = await _context.TaskTable
                 .Select(t => t.type)
                 .GroupBy(type => type)
-                .ToDictionary(g => g.Key, g => g.Count());
+                .ToDictionaryAsync(g => g.Key, g => g.Count());
 
             return Ok(counts);
         }
@@ -79,7 +79,7 @@ namespace TaskAPI.Controllers
             _context.TaskTable.Add(taskObject);
             await _context.SaveChangesAsync();
 
-            return Ok(taskObject);
+            return CreatedAtAction(nameof(GetByDate), new { date = taskObject.due_date }, taskObject);
         }
 
 
@@ -123,7 +123,7 @@ namespace TaskAPI.Controllers
 
             _context.TaskTable.Remove(existingTask);
             await _context.SaveChangesAsync();
-            return Ok("Task deleted successfully.");
+            return NoContent();
         }
     }
 }

@@ -114,34 +114,52 @@
 
     <script>
         async function loadTasks() {
-            const response = await fetch('/api/task');
-            const data = await response.json();
-            const tbody = document.getElementById('tasksTable').querySelector('tbody');
-            tbody.innerHTML = '';
-            for (const task of data) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${task.id}</td>
-                    <td>${task.name}</td>
-                    <td>${task.description}</td>
-                    <td>${task.type}</td>
-                    <td>${task.due_date}</td>
-                    <td>${task.completed ? 'Yes' : 'No'}</td>
-                    <td><button onclick="deleteTask(${task.id})">Delete</button></td>
-                `;
-                tbody.appendChild(row);
+            try {
+                const response = await fetch('/api/task');
+                if (!response.ok) {
+                    console.error('Failed to fetch tasks:', response.status);
+                    return;
+                }
+                const data = await response.json();
+                console.log('Tasks loaded:', data);
+                const tbody = document.getElementById('tasksTable').querySelector('tbody');
+                tbody.innerHTML = '';
+                for (const task of data) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${task.id}</td>
+                        <td>${task.name}</td>
+                        <td>${task.description}</td>
+                        <td>${task.type}</td>
+                        <td>${task.due_date}</td>
+                        <td>${task.completed ? 'Yes' : 'No'}</td>
+                        <td><button onclick="deleteTask(${task.id})">Delete</button></td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error loading tasks:', error);
             }
         }
 
         async function loadCounts() {
-            const response = await fetch('/api/task/count-by-type');
-            const data = await response.json();
-            const tbody = document.getElementById('countsTable').querySelector('tbody');
-            tbody.innerHTML = '';
-            for (const [type, count] of Object.entries(data)) {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${type}</td><td>${count}</td>`;
-                tbody.appendChild(row);
+            try {
+                const response = await fetch('/api/task/count-by-type');
+                if (!response.ok) {
+                    console.error('Failed to fetch counts:', response.status);
+                    return;
+                }
+                const data = await response.json();
+                console.log('Counts loaded:', data);
+                const tbody = document.getElementById('countsTable').querySelector('tbody');
+                tbody.innerHTML = '';
+                for (const [type, count] of Object.entries(data)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${type}</td><td>${count}</td>`;
+                    tbody.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error loading counts:', error);
             }
         }
 
@@ -210,6 +228,7 @@
         }
 
         // initial load
+        console.log('Page loaded, starting to fetch data...');
         loadTasks();
         loadCounts();
     </script>
