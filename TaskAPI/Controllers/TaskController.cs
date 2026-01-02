@@ -75,7 +75,7 @@ namespace TaskAPI.Controllers
             {
                 return BadRequest("Task is missing.");
             }
-            
+
             _context.TaskTable.Add(taskObject);
             await _context.SaveChangesAsync();
 
@@ -110,6 +110,20 @@ namespace TaskAPI.Controllers
             existingTask.completed = taskObject.completed;
             await _context.SaveChangesAsync();
             return Ok(existingTask);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var existingTask = await _context.TaskTable.FindAsync(id);
+            if (existingTask == null)
+            {
+                return NotFound("Task not found.");
+            }
+
+            _context.TaskTable.Remove(existingTask);
+            await _context.SaveChangesAsync();
+            return Ok("Task deleted successfully.");
         }
     }
 }
