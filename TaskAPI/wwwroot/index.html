@@ -1,0 +1,205 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 0.5em 1em;
+        }
+
+        .section {
+            margin-bottom: 2em;
+        }
+
+        .forms-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .form-box {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 1rem;
+        }
+
+        .form-box label {
+            display: block;
+            margin-top: 0.5rem;
+        }
+
+        label {
+            display: block;
+            margin-top: 0.5em;
+        }
+    </style>
+</head>
+<body>
+    <nav style="margin-bottom: 1.5em;">
+        <a href="calendar.html">📅 View Calendar</a>
+    </nav>
+    <h1>Task Manager</h1>
+
+    <div class="section">
+        <h2>All Tasks</h2>
+        <table id="tasksTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Due Date</th>
+                    <th>Completed</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Task Count By Type</h2>
+        <table id="countsTable">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="forms-container">
+            <div class="form-box">
+                <h2>Add New Task</h2>
+                <form id="addTaskForm">
+                    <label>Name: <input type="text" name="name" required></label>
+                    <label>Description: <input type="text" name="description"></label>
+                    <label>Type: <input type="text" name="type" required></label>
+                    <label>Due Date: <input type="date" name="due_date" required></label>
+                    <label>Completed: <input type="checkbox" name="completed"></label>
+                    <button type="submit">Add Task</button>
+                </form>
+            </div>
+
+            <div class="form-box">
+                <h2>Update Task</h2>
+                <form id="updateTaskForm">
+                    <label>ID: <input type="number" name="id" required></label>
+                    <label>Name: <input type="text" name="name"></label>
+                    <label>Description: <input type="text" name="description"></label>
+                    <label>Type: <input type="text" name="type"></label>
+                    <label>Due Date: <input type="date" name="due_date"></label>
+                    <label>Completed: <input type="checkbox" name="completed"></label>
+                    <button type="submit">Update Task</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        async function loadTasks() {
+            const response = await fetch('/api/task');
+            const data = await response.json();
+            const tbody = document.getElementById('tasksTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            for (const task of data) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                                        <td>${task.id}</td>
+                                        <td>${task.name}</td>
+                                        <td>${task.description}</td>
+                                        <td>${task.type}</td>
+                                        <td>${task.due_date}</td>
+                                        <td>${task.completed ? 'Yes' : 'No'}</td>
+                                    `;
+                tbody.appendChild(row);
+            }
+        }
+
+        async function loadCounts() {
+            const response = await fetch('/api/task/count-by-type');
+            const data = await response.json();
+            const tbody = document.getElementById('countsTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            for (const [type, count] of Object.entries(data)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${type}</td><td>${count}</td>`;
+                tbody.appendChild(row);
+            }
+        }
+
+        document.getElementById('addTaskForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = e.target;
+            const task = {
+                name: form.name.value,
+                description: form.description.value,
+                type: form.type.value,
+                due_date: form.due_date.value,
+                completed: form.completed.checked
+            };
+            const response = await fetch('/api/task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(task)
+            });
+            if (response.ok) {
+                form.reset();
+                await loadTasks();
+                await loadCounts();
+            } else {
+                alert('Failed to add task');
+            }
+        });
+
+        document.getElementById('updateTaskForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+
+            const task = {
+                id: parseInt(form.id.value),
+                name: form.name.value || null,
+                description: form.description.value || null,
+                type: form.type.value || null,
+                due_date: form.due_date.value || null,
+                completed: form.completed.checked
+            };
+
+            const response = await fetch('/api/task', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(task)
+            });
+
+            if (response.ok) {
+                form.reset();
+                await loadTasks();
+                await loadCounts();
+            } else {
+                alert('Failed to update task');
+            }
+        });
+
+
+        // initial load
+        loadTasks();
+        loadCounts();
+    </script>
+</body>
+</html>

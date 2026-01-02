@@ -1,0 +1,244 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Weekly Calendar</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .toolbar {
+            position: relative;
+            padding: 1rem;
+            border-bottom: 1px solid #ccc;
+            background: #fff;
+        }
+
+        .toolbar-center {
+            text-align: center;
+        }
+
+        .toolbar button {
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        #weekLabel {
+            font-size: 1.1rem;
+            margin: 0 0.5rem;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            text-decoration: none;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+            .back-link:hover {
+                text-decoration: underline;
+            }
+
+        .seven-columns {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            height: calc(100vh - 72px);
+            gap: 1px;
+            background-color: #ccc;
+        }
+
+        .column {
+            background-color: #f9f9f9;
+            padding: 0.5rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+            .column h2 {
+                margin: 0;
+                text-align: center;
+                border-bottom: 1px solid #ddd;
+                padding: 0.5rem;
+                font-size: 0.95rem;
+                background: #fff;
+                display: grid;
+                grid-template-rows: 1fr 1fr;
+                line-height: 1.1;
+            }
+
+        .day-header span {
+            display: block;
+            white-space: nowrap;
+        }
+
+        .day-content {
+            flex: 1;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            background-color: #fff;
+            overflow-y: auto;
+        }
+
+        .task {
+            padding: 0.4rem;
+            margin-bottom: 0.4rem;
+            background-color: #e9f1ff;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+            .task.completed {
+                text-decoration: line-through;
+                opacity: 0.6;
+            }
+
+        @media (max-width: 900px) {
+            .seven-columns {
+                grid-template-columns: repeat(2, 1fr);
+                height: auto;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .seven-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <a href="index.html" class="back-link">← Edit Tasks</a>
+        <div class="toolbar-center">
+            <button id="prevWeek">⬅ Previous Week</button>
+            <strong id="weekLabel"></strong>
+            <button id="nextWeek">Next Week ➡</button>
+        </div>
+    </div>
+
+    <div class="seven-columns" id="calendar"></div>
+
+    <script>
+        let currentWeekStart = getStartOfWeek(new Date());
+
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - (day === 0 ? 6 : day - 1);
+            d.setDate(diff);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function renderWeek() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+
+            document.getElementById('weekLabel').textContent =
+                `${currentWeekStart.toDateString()} – ${weekEnd.toDateString()}`;
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(date.getDate() + i);
+
+                const isoDate = formatDate(date);
+
+                const column = document.createElement('div');
+                column.className = 'column';
+                column.dataset.date = isoDate;
+
+                column.innerHTML = `
+                    <h2 class="day-header">
+                        <span class="day-name">${date.toLocaleDateString(undefined, { weekday: 'long' })}</span>
+                        <span class="day-date">${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    </h2>
+                    <div class="day-content" id="day-${isoDate}"></div>
+                `;
+
+                calendar.appendChild(column);
+                loadTasksForDay(isoDate);
+            }
+        }
+
+        
+        async function loadTasksForDay(date) {
+            const container = document.getElementById(`day-${date}`);
+            container.innerHTML = '';
+
+            const response = await fetch(`/api/task/${date}`);
+            const tasks = await response.json();
+
+            tasks.forEach(t => {
+                const div = document.createElement('div');
+                div.className = `task ${t.completed ? 'completed' : ''}`;
+                div.innerHTML = `
+                    <input type="checkbox"
+                           data-task-id="${t.id}"
+                           ${t.completed ? 'checked' : ''}>
+                    <span>${t.name}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        
+        document.addEventListener('change', async (e) => {
+            if (e.target.matches('.task input[type="checkbox"]')) {
+                const checkbox = e.target;
+                const taskId = checkbox.dataset.taskId;
+                const completed = checkbox.checked;
+
+                checkbox.disabled = true;
+
+                await fetch(`/api/task`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        "id": taskId,
+                        "name": null,
+                        "description": null,
+                        "type": null,
+                        "due_date": null,
+                        "completed": completed
+                    })
+                });
+
+                checkbox.disabled = false;
+                checkbox.closest('.task').classList.toggle('completed', completed);
+            }
+        });
+
+        document.getElementById('prevWeek').onclick = () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            renderWeek();
+        };
+
+        document.getElementById('nextWeek').onclick = () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            renderWeek();
+        };
+
+        renderWeek();
+    </script>
+
+</body>
+</html>
